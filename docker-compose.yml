@@ -1,0 +1,109 @@
+# PyFSD GenAI - Docker Configuration
+
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/pyfsdgenai
+      - MONGODB_URL=mongodb://mongo:27017/pyfsdgenai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - mongo
+      - redis
+    volumes:
+      - ./src:/app/src
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=pyfsdgenai
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # MongoDB for Document Storage
+  mongo:
+    image: mongo:7
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+
+  # Redis for Caching and Task Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Celery Worker for Background Tasks
+  celery-worker:
+    build: .
+    command: celery -A src.core.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/pyfsdgenai
+      - MONGODB_URL=mongodb://mongo:27017/pyfsdgenai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - mongo
+      - redis
+    volumes:
+      - ./src:/app/src
+    restart: unless-stopped
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build: .
+    command: celery -A src.core.celery beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/pyfsdgenai
+      - MONGODB_URL=mongodb://mongo:27017/pyfsdgenai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - mongo
+      - redis
+    volumes:
+      - ./src:/app/src
+    restart: unless-stopped
+
+  # Flower for Celery Monitoring
+  flower:
+    build: .
+    command: celery -A src.core.celery flower --port=5555
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/pyfsdgenai
+      - MONGODB_URL=mongodb://mongo:27017/pyfsdgenai
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - mongo
+      - redis
+    ports:
+      - "5555:5555"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
