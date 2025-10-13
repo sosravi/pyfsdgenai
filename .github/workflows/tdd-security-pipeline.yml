@@ -1,0 +1,378 @@
+name: TDD & Security Validation Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Test-Driven Development Validation
+  tdd-validation:
+    name: TDD Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio bandit safety
+        
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=html
+        
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v
+        
+    - name: Run security tests
+      run: |
+        pytest tests/security/ -v
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        
+    - name: Check test coverage
+      run: |
+        coverage report --fail-under=90
+
+  # Security Validation
+  security-validation:
+    name: Security Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install security tools
+      run: |
+        pip install bandit safety pip-audit detect-secrets
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/ -f json -o bandit-report.json
+        bandit -r src/ -f txt
+        
+    - name: Run Safety check
+      run: |
+        safety check --json --output safety-report.json
+        safety check
+        
+    - name: Run pip-audit
+      run: |
+        pip-audit --desc --format=json --output=pip-audit-report.json
+        pip-audit --desc
+        
+    - name: Detect secrets
+      run: |
+        detect-secrets scan --baseline .secrets.baseline
+        detect-secrets audit .secrets.baseline
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          pip-audit-report.json
+
+  # Code Quality Validation
+  code-quality:
+    name: Code Quality Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install linting tools
+      run: |
+        pip install black flake8 mypy isort
+        
+    - name: Run Black formatter check
+      run: |
+        black --check src/ tests/
+        
+    - name: Run isort import sorting check
+      run: |
+        isort --check-only src/ tests/
+        
+    - name: Run Flake8 linting
+      run: |
+        flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+        
+    - name: Run MyPy type checking
+      run: |
+        mypy src/ --ignore-missing-imports
+
+  # Documentation Validation
+  documentation-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install documentation tools
+      run: |
+        pip install sphinx sphinx-rtd-theme
+        
+    - name: Validate API documentation
+      run: |
+        python -c "
+        import sys
+        sys.path.append('src')
+        from src.main import app
+        from fastapi.openapi.utils import get_openapi
+        
+        # Generate OpenAPI schema
+        openapi_schema = get_openapi(
+            title='PyFSD GenAI API',
+            version='1.0.0',
+            description='AI-Powered Procurement Intelligence Platform',
+            routes=app.routes,
+        )
+        
+        # Validate schema
+        assert 'paths' in openapi_schema
+        assert 'components' in openapi_schema
+        print('API documentation validation passed')
+        "
+        
+    - name: Check documentation completeness
+      run: |
+        # Check if all API endpoints are documented
+        python scripts/validate_docs.py
+        
+    - name: Build documentation
+      run: |
+        sphinx-build -W docs/ docs/_build/
+
+  # Performance Testing
+  performance-testing:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install locust
+        
+    - name: Start application
+      run: |
+        docker-compose up -d
+        sleep 30  # Wait for services to start
+        
+    - name: Run performance tests
+      run: |
+        pytest tests/performance/ -v
+        
+    - name: Run load tests with Locust
+      run: |
+        locust -f tests/load/locustfile.py --host=http://localhost:8000 --headless -u 10 -r 2 -t 30s --html=load-test-report.html
+        
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-reports
+        path: |
+          load-test-report.html
+          
+    - name: Cleanup
+      run: |
+        docker-compose down
+
+  # Pre-deployment Validation
+  pre-deployment:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    needs: [tdd-validation, security-validation, code-quality, documentation-validation, performance-testing]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        
+    - name: Run comprehensive test suite
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml
+        
+    - name: Validate environment configuration
+      run: |
+        python scripts/validate_env.py
+        
+    - name: Check for breaking changes
+      run: |
+        python scripts/check_breaking_changes.py
+        
+    - name: Generate deployment report
+      run: |
+        python scripts/generate_deployment_report.py
+        
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-artifacts
+        path: |
+          deployment-report.json
+          coverage.xml
+
+  # Security Deployment Validation
+  security-deployment:
+    name: Security Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [pre-deployment]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install security tools
+      run: |
+        pip install bandit safety pip-audit
+        
+    - name: Infrastructure security validation
+      run: |
+        python scripts/validate_infrastructure_security.py
+        
+    - name: Application security validation
+      run: |
+        python scripts/validate_app_security.py
+        
+    - name: Data security validation
+      run: |
+        python scripts/validate_data_security.py
+        
+    - name: Generate security report
+      run: |
+        python scripts/generate_security_report.py
+        
+    - name: Upload security validation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-validation-artifacts
+        path: |
+          security-report.json
+          infrastructure-security.json
+          app-security.json
+          data-security.json
+
+  # Deployment (Only after all validations pass)
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [security-deployment]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add actual deployment commands here
+        
+    - name: Run smoke tests
+      run: |
+        pytest tests/smoke/ --env=staging -v
+        
+    - name: Notify deployment success
+      run: |
+        echo "Staging deployment successful"
+
+  # Production Deployment (Manual approval required)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production environment..."
+        # Add actual production deployment commands here
+        
+    - name: Run production smoke tests
+      run: |
+        pytest tests/smoke/ --env=production -v
+        
+    - name: Monitor deployment health
+      run: |
+        python scripts/monitor_deployment.py
+        
+    - name: Notify production deployment
+      run: |
+        echo "Production deployment successful"
