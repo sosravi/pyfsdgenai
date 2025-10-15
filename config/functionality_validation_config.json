@@ -1,0 +1,160 @@
+{
+  "thresholds": {
+    "performance": {
+      "max_response_time": 5.0,
+      "min_throughput": 100,
+      "max_memory_usage": 500,
+      "max_cpu_usage": 80.0
+    },
+    "accuracy": {
+      "min_success_rate": 0.95,
+      "max_error_rate": 0.05,
+      "data_precision": 0.99,
+      "calculation_accuracy": 0.999
+    },
+    "security": {
+      "max_failed_attempts": 3,
+      "session_timeout": 3600,
+      "password_strength": "strong",
+      "encryption_strength": "AES-256"
+    },
+    "consistency": {
+      "referential_integrity": 1.0,
+      "data_accuracy": 0.99,
+      "transaction_atomicity": 1.0
+    }
+  },
+  "validations": {
+    "end_to_end": true,
+    "data_flow": true,
+    "business_logic": true,
+    "integration": true,
+    "user_workflow": true,
+    "error_handling": true,
+    "performance": true,
+    "security": true,
+    "data_consistency": true
+  },
+  "automation": {
+    "enabled": true,
+    "schedule": "daily",
+    "time": "03:00",
+    "timezone": "UTC",
+    "notifications": ["email", "slack"],
+    "retention": {
+      "keep_results_days": 30,
+      "keep_reports_days": 90,
+      "keep_logs_days": 7
+    }
+  },
+  "notifications": {
+    "email": {
+      "enabled": true,
+      "recipients": ["dev-team@example.com", "qa-team@example.com"],
+      "subject": "Functionality Validation Report: {status} - {timestamp}"
+    },
+    "slack": {
+      "enabled": true,
+      "webhook_url": "https://hooks.slack.com/services/...",
+      "channel": "#validation-alerts"
+    }
+  },
+  "reporting": {
+    "output_formats": ["json", "html", "pdf"],
+    "include_charts": true,
+    "include_recommendations": true,
+    "include_performance_metrics": true,
+    "include_security_assessment": true
+  },
+  "integration": {
+    "test_framework": {
+      "enabled": true,
+      "framework": "pytest",
+      "integration_level": "full"
+    },
+    "regression_framework": {
+      "enabled": true,
+      "integration_level": "partial"
+    },
+    "monitoring": {
+      "enabled": true,
+      "metrics_endpoint": "/metrics/validation",
+      "alerting_enabled": true
+    },
+    "ci_cd": {
+      "enabled": true,
+      "fail_on_validation_failure": true,
+      "block_deployment": true,
+      "required_validations": ["end_to_end", "security", "performance"]
+    }
+  },
+  "data_management": {
+    "test_data": {
+      "auto_generate": true,
+      "data_sets": ["comprehensive", "minimal", "edge_cases"],
+      "refresh_frequency": "weekly"
+    },
+    "baseline_data": {
+      "maintain_baselines": true,
+      "baseline_versions": ["v1.0.0", "v1.1.0"],
+      "comparison_enabled": true
+    }
+  },
+  "workflow_configuration": {
+    "contract_management": {
+      "enabled": true,
+      "steps": ["create", "review", "approve", "activate"],
+      "validation_rules": ["amount_positive", "currency_valid", "dates_logical"]
+    },
+    "invoice_processing": {
+      "enabled": true,
+      "steps": ["create", "add_items", "calculate", "submit"],
+      "validation_rules": ["calculation_accurate", "line_items_valid", "totals_correct"]
+    },
+    "document_handling": {
+      "enabled": true,
+      "steps": ["upload", "extract", "analyze", "store"],
+      "validation_rules": ["file_valid", "extraction_successful", "metadata_complete"]
+    }
+  },
+  "security_configuration": {
+    "authentication": {
+      "test_scenarios": ["valid_credentials", "invalid_credentials", "missing_credentials"],
+      "expected_behaviors": ["authenticate_valid", "reject_invalid", "reject_missing"]
+    },
+    "authorization": {
+      "test_scenarios": ["admin_access", "user_access", "viewer_access"],
+      "expected_behaviors": ["grant_admin", "limit_user", "restrict_viewer"]
+    },
+    "input_validation": {
+      "test_scenarios": ["sql_injection", "xss_attack", "path_traversal"],
+      "expected_behaviors": ["sanitize_or_reject", "sanitize_or_reject", "reject"]
+    }
+  },
+  "performance_configuration": {
+    "response_time": {
+      "contract_operations": {
+        "create": 2.0,
+        "read": 0.5,
+        "update": 1.5,
+        "delete": 1.0
+      },
+      "invoice_operations": {
+        "create": 3.0,
+        "calculate": 0.2,
+        "list": 1.0
+      }
+    },
+    "throughput": {
+      "api_endpoints": {
+        "min_requests_per_second": 100,
+        "test_duration": 10
+      }
+    },
+    "concurrent_users": {
+      "max_concurrent": 50,
+      "test_duration": 30,
+      "max_response_time": 5.0
+    }
+  }
+}
