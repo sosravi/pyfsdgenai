@@ -389,3 +389,4 @@ Contracts are scored on multiple dimensions:
 **User Guide Version**: 1.0.0  
 **Last Updated**: January 2025  
 **Compatible with**: PyFSD GenAI v1.0.0+
+

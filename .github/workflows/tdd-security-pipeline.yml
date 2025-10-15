@@ -1,4 +1,4 @@
-name: TDD & Security Validation Pipeline
+name: Functionality Validation & Comprehensive Testing Pipeline
 
 on:
   push:
@@ -11,10 +11,74 @@ env:
   NODE_VERSION: '18'
 
 jobs:
-  # Test-Driven Development Validation
-  tdd-validation:
-    name: TDD Validation
+  # Comprehensive Unit Testing with Edge Cases
+  unit-testing:
+    name: Comprehensive Unit Testing
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio pytest-xdist pytest-mock
+        pip install hypothesis  # Property-based testing
+        
+    - name: Run comprehensive unit tests with edge cases
+      run: |
+        pytest tests/unit/ -v \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --cov-fail-under=95 \
+          --maxfail=0 \
+          --strict-markers \
+          --disable-warnings \
+          -n auto  # Parallel execution
+        
+    - name: Run property-based tests with Hypothesis
+      run: |
+        pytest tests/property/ -v --hypothesis-show-statistics
+        
+    - name: Run edge case tests
+      run: |
+        pytest tests/edge_cases/ -v --maxfail=0
+        
+    - name: Run boundary value tests
+      run: |
+        pytest tests/boundary/ -v --maxfail=0
+        
+    - name: Upload unit test coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unit-tests
+        name: unit-test-coverage-${{ matrix.python-version }}
+
+  # Comprehensive Regression Testing
+  regression-testing:
+    name: Regression Testing Suite
+    runs-on: ubuntu-latest
+    needs: unit-testing
     
     steps:
     - name: Checkout code
@@ -25,40 +89,114 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-xdist pytest-html
+        
+    - name: Start test environment
+      run: |
+        docker-compose up -d
+        sleep 30  # Wait for services to start
+        
+    - name: Run comprehensive regression test suite
+      run: |
+        pytest tests/regression/ -v \
+          --html=regression-report.html \
+          --self-contained-html \
+          --maxfail=0 \
+          --strict-markers \
+          -n auto
+        
+    - name: Run integration regression tests
+      run: |
+        pytest tests/integration/regression/ -v --maxfail=0
+        
+    - name: Run API regression tests
+      run: |
+        pytest tests/api/regression/ -v --maxfail=0
+        
+    - name: Run database regression tests
+      run: |
+        pytest tests/database/regression/ -v --maxfail=0
+        
+    - name: Upload regression test reports
+      uses: actions/upload-artifact@v3
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        name: regression-test-reports
+        path: |
+          regression-report.html
+          
+    - name: Cleanup test environment
+      run: |
+        docker-compose down
+
+  # Functionality Validation Testing
+  functionality-validation:
+    name: Functionality Validation
+    runs-on: ubuntu-latest
+    needs: [unit-testing, regression-testing]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-asyncio bandit safety
+        pip install pytest pytest-xdist allure-pytest
         
-    - name: Run unit tests
+    - name: Start application environment
       run: |
-        pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=html
+        docker-compose up -d
+        sleep 45  # Wait for all services to start
         
-    - name: Run integration tests
+    - name: Run functionality validation tests
       run: |
-        pytest tests/integration/ -v
+        pytest tests/functionality/ -v \
+          --allure-results-dir=allure-results \
+          --maxfail=0 \
+          --strict-markers \
+          -n auto
         
-    - name: Run security tests
+    - name: Run business logic validation tests
       run: |
-        pytest tests/security/ -v
+        pytest tests/business_logic/ -v --maxfail=0
         
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+    - name: Run user workflow validation tests
+      run: |
+        pytest tests/user_workflows/ -v --maxfail=0
+        
+    - name: Run data integrity validation tests
+      run: |
+        pytest tests/data_integrity/ -v --maxfail=0
+        
+    - name: Run feature completeness tests
+      run: |
+        pytest tests/feature_completeness/ -v --maxfail=0
+        
+    - name: Generate functionality validation report
+      run: |
+        python scripts/generate_functionality_report.py
+        
+    - name: Upload functionality validation reports
+      uses: actions/upload-artifact@v3
       with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        
-    - name: Check test coverage
+        name: functionality-validation-reports
+        path: |
+          allure-results/
+          functionality-report.json
+          
+    - name: Cleanup
       run: |
-        coverage report --fail-under=90
+        docker-compose down
 
   # Security Validation
   security-validation:
