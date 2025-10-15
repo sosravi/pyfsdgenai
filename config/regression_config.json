@@ -1,0 +1,90 @@
+{
+  "thresholds": {
+    "performance": {
+      "execution_time": 50.0,
+      "memory_usage": 100.0,
+      "cpu_usage": 75.0,
+      "disk_io": 100.0,
+      "network_io": 150.0,
+      "database_queries": 100.0,
+      "cache_hits": 20.0,
+      "response_time": 100.0
+    },
+    "test_coverage": {
+      "minimum_coverage": 80.0,
+      "coverage_decrease": 5.0,
+      "test_failure_increase": 10.0,
+      "execution_time_increase": 50.0
+    },
+    "api_behavior": {
+      "response_time_increase": 100.0,
+      "status_code_change": true,
+      "data_structure_change": true,
+      "missing_fields": true
+    },
+    "database_schema": {
+      "missing_tables": true,
+      "missing_columns": true,
+      "missing_indexes": true,
+      "missing_constraints": true,
+      "data_type_changes": true
+    }
+  },
+  "notifications": {
+    "enabled": true,
+    "methods": ["email", "slack"],
+    "severity_thresholds": {
+      "critical": ["email", "slack"],
+      "high": ["email", "slack"],
+      "medium": ["slack"],
+      "low": []
+    },
+    "email": {
+      "recipients": ["dev-team@example.com", "qa-team@example.com"],
+      "subject": "Regression Alert: {severity} - {type}"
+    },
+    "slack": {
+      "webhook_url": "https://hooks.slack.com/services/...",
+      "channel": "#alerts"
+    }
+  },
+  "baseline_version": "v1.0.0",
+  "current_version": "v1.1.0",
+  "test_data": {
+    "baseline_dataset": "baseline",
+    "current_dataset": "current",
+    "regression_dataset": "regression_scenarios"
+  },
+  "reporting": {
+    "output_formats": ["json", "html", "pdf"],
+    "include_charts": true,
+    "include_recommendations": true,
+    "include_trend_analysis": true
+  },
+  "automation": {
+    "schedule": {
+      "enabled": true,
+      "frequency": "daily",
+      "time": "02:00",
+      "timezone": "UTC"
+    },
+    "retention": {
+      "keep_results_days": 30,
+      "keep_reports_days": 90,
+      "keep_history_days": 365
+    }
+  },
+  "integration": {
+    "ci_cd": {
+      "enabled": true,
+      "fail_on_critical": true,
+      "fail_on_high": false,
+      "block_deployment": true
+    },
+    "monitoring": {
+      "enabled": true,
+      "metrics_endpoint": "/metrics/regression",
+      "alerting_enabled": true
+    }
+  }
+}

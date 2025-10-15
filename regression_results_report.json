@@ -1,0 +1,13 @@
+{
+  "summary": {
+    "total_regressions": 0,
+    "high_severity": 0,
+    "medium_severity": 0,
+    "low_severity": 0,
+    "critical_severity": 0,
+    "regression_types": {}
+  },
+  "regressions": [],
+  "recommendations": [],
+  "timestamp": "2025-10-15T12:28:29.286115"
+}
