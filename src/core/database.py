@@ -37,3 +37,5 @@ def init_database(database_url: str):
     # Create tables
     Base.metadata.create_all(bind=engine)
 
+
+

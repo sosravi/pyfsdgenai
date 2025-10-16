@@ -36,3 +36,5 @@ def create_initial_migration():
 
 if __name__ == "__main__":
     create_initial_migration()
+
+

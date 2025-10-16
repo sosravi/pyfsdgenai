@@ -346,3 +346,5 @@ class TestIntegrationMarkers:
         # This would require actual service implementations
         assert True
 
+
+

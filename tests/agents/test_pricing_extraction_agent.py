@@ -583,3 +583,5 @@ class TestAgentMarkers:
         agent = PricingExtractionAgent()
         assert agent.agent_type == "pricing_extraction"
         assert agent.status == AgentStatus.IDLE
+
+

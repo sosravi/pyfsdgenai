@@ -49,3 +49,5 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 # Default command
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
+
+

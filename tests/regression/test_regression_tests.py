@@ -543,3 +543,5 @@ class TestRegressionMarkers:
         response = test_client.post("/contracts", json=contract_data)
         assert response.status_code in [200, 201, 400, 422]
 
+
+

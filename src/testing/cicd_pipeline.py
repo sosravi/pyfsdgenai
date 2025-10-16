@@ -806,3 +806,5 @@ class CICDPipelineManager:
     def check_pipeline_alerts(self) -> List[Dict[str, Any]]:
         """Check for pipeline alerts."""
         return self.monitor.check_alerts()
+
+

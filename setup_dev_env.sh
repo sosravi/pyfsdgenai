@@ -67,3 +67,5 @@ echo "- Run with coverage: pytest --cov=src"
 echo "- Format code: black src/ tests/"
 echo "- Lint code: flake8 src/ tests/"
 
+
+

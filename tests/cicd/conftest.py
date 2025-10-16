@@ -369,3 +369,5 @@ def temp_workflow_file(tmp_path):
         yaml.dump(workflow_data, f)
     
     return workflow_file
+
+
